@@ -11,7 +11,10 @@ import sys
 
 
 def create_output_file_path(root_dir=None, out_dir='sim_data', out_name=None, overide=False):
-    """ Create path object for the output filepath for the output file.
+    """
+    Create path object for the output filepath for the output file.
+
+    Parameters
 
     Optional Keyword arguments:
     root_dir -- string literal or pathlike object refering to the target root directory
@@ -23,12 +26,12 @@ def create_output_file_path(root_dir=None, out_dir='sim_data', out_name=None, ov
     """
     if not root_dir:
         root_dir = Path.cwd()
-    dir = Path(root_dir, out_dir)
-    if not dir.is_dir():
-        dir.mkdir(parents=True)
+    dirpath = Path(root_dir, out_dir)
+    if not dirpath.is_dir():
+        dirpath.mkdir(parents=True)
     if not out_name:
         out_name = f"simdata_{datetime.datetime.now().isoformat(timespec='seconds')}.txt"
-    out_path = dir / out_name
+    out_path = dirpath / out_name
     if out_path.exists():
         if overide is False:
             raise Exception("Output file already exists. Please enter unique filepath information or use overide==True.")
@@ -50,12 +53,12 @@ def get_data_file_path(root_dir=None, out_dir='sim_data', out_name=None):
     """
     if not root_dir:
         root_dir = Path.cwd()
-    dir = Path(root_dir, out_dir)
-    if not dir.is_dir():
-        dir.mkdir(parents=True)
+    dirpath = Path(root_dir, out_dir)
+    if not dirpath.is_dir():
+        dirpath.mkdir(parents=True)
     if not out_name:
         out_name = f"simdata_{datetime.datetime.now().isoformat(timespec='seconds')}.txt"
-    out_path = dir / out_name
+    out_path = dirpath / out_name
     if not out_path.exists():
         raise Exception("File does not exist. Please enter existing filepath.")
     else:
