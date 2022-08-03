@@ -1,0 +1,15 @@
+name: monte-carlo-env
+
+dependencies:
+    - ipykernel=5.3
+    - ipython=7.22
+    - ipython_genutils=0.2
+    - matplotlib=3.3
+    - numpy=1.20
+    - pandas=1.2
+    - pathlib=1.0
+    - pip=21.0
+    - pytest=6.2
+    - python=3.8
+    - setuptools=52.0
+    - scipy=1.6
