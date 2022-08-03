@@ -6,9 +6,10 @@
 # In[1]:
 
 
-import sys
-print(sys.path)
-sys.path.append(r'C:\Users\Wuestney\Documents\GitHub')
+import sys, pathlib
+import argparse
+#print(sys.path)
+sys.path.append(pathlib.Path(__file__).parent)
 print(sys.path)
 import datetime
 import functools
@@ -17,18 +18,16 @@ import numpy as np
 from numpy.random import PCG64
 import pandas as pd
 import pyusm
-from discreteMSE.discreteMSE.entropy import apen, sampen
-from markov_chain_simulation.mc_measures.gen_mc_transition import GenMarkovTransitionProb as MCmatrix
-from markov_chain_simulation.mc_measures.gen_mc_transition import gen_model, get_model, gen_sample
-from markov_chain_simulation.mc_measures import mc_entropy
+import discreteMSE
+#from discreteMSE.discreteMSE.entropy import apen, sampen
+from mc_measures.gen_mc_transition import GenMarkovTransitionProb as MCmatrix
+from mc_measures.gen_mc_transition import gen_model, get_model, gen_sample
+from mc_measures import mc_entropy
 from monte_carlo_sim import sim_files
 
+# set module global data
 
-# ## Define functions to calculate theta values for different distributions
-
-# In[5]:
-
-
+# this is same default sig2 array found in pyusm package.
 SIG2V = ('1.000000e-10', '1.778279e-10', '3.162278e-10', '5.623413e-10',
                  '1.000000e-09', '1.778279e-09', '3.162278e-09', '5.623413e-09',
                  '1.000000e-08', '1.778279e-08', '3.162278e-08', '5.623413e-08',
@@ -41,6 +40,8 @@ SIG2V = ('1.000000e-10', '1.778279e-10', '3.162278e-10', '5.623413e-10',
                 '1.000000e-01', '1.778279e-01', '3.162278e-01', '5.623413e-01',
                 '1', '1.778279e+00', '3.162278e+00', '5.623413e+00', '10', '1.778279e+01',
                 '3.162278e+01', '5.623413e+01', '100')
+
+# define functions to compute expected entropy values for different generating distributions
 def theta_iiduniform(a, sig2v=SIG2V):
     # a is the cardinality of the alphabet of the generating function
     #apen and sampen and renyi are expected to give identical results for iid uniformly distributed random numbers
@@ -55,6 +56,7 @@ def theta_iiduniform(a, sig2v=SIG2V):
     return apen, sampen, renyi_disc, renyi_cont
 
 def theta_markov(MC_model):
+    # function expects instance of a GMTP class as input
     #apen of a Markov chain is equivalent to the entropy rate of the Markov chain
     apen = mc_entropy.markov_apen(MC_model)
     sampen = mc_entropy.markov_sampen(MC_model)
