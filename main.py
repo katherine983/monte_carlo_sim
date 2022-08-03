@@ -27,7 +27,7 @@ from monte_carlo_sim import sim_files
 
 # set module global data
 
-# this is same default sig2 array found in pyusm package.
+# this is same default sig2 array pyusm.usm_entropy.
 SIG2V = ('1.000000e-10', '1.778279e-10', '3.162278e-10', '5.623413e-10',
                  '1.000000e-09', '1.778279e-09', '3.162278e-09', '5.623413e-09',
                  '1.000000e-08', '1.778279e-08', '3.162278e-08', '5.623413e-08',
@@ -53,20 +53,20 @@ def theta_iiduniform(a, sig2v=SIG2V):
     for sig2 in sig2v:
         rn2 = a * ((1/(-12*sig2)) - np.log((2*np.sqrt(sig2)*np.sqrt(np.pi))))
         renyi_cont[sig2] = rn2
-    return apen, sampen, renyi_disc, renyi_cont
+    return dict(list(zip(('apen', 'sampen', 'renyi_disc', 'renyi_cont'), (apen, sampen, renyi_disc, renyi_cont))))
 
 def theta_markov(MC_model):
     # function expects instance of a GMTP class as input
     #apen of a Markov chain is equivalent to the entropy rate of the Markov chain
     apen = mc_entropy.markov_apen(MC_model)
     sampen = mc_entropy.markov_sampen(MC_model)
+    # theoretical renyi of mc chain not defined at this time
+    # this is place holder
     renyi = None
-    return apen, sampen, renyi
+    return dict(list(zip(('apen', 'sampen', 'renyi'), (apen, sampen, renyi))))
 
-
-# In[6]:
-
-
+# combine making usm instance and computing renyi entropy into one function so
+# that it can be passed to a Simulator class
 def cgr_renyi(data, sig2v=SIG2V, A=None, refseq=None, Plot=False):
     """
     Combines making the usm coordinates from a data sequence and calculating the renyi entropy values on the CGR object.
@@ -91,13 +91,14 @@ def cgr_renyi(data, sig2v=SIG2V, A=None, refseq=None, Plot=False):
     Dictionary containing renyi quadratic entropy of the USM for each sig2 value.
 
     """
-    cgr = pyusm.USM.make_usm(data, A=A)
+    cgr = pyusm.USM.make_usm(data, A=A, seed='centroid')
     cgr_coords = np.asarray(cgr.fw)
     renyi = pyusm.usm_entropy.renyi2usm(cgr_coords, sig2v, refseq=refseq, Plot=Plot, deep_copy=False)
     return renyi
 
 
-# ## Define functions to handle coordinating the RNG instances and use them to generate reproducible random number samples.
+# Define functions to handle coordinating the RNG instances and use them to
+# generate reproducible random number samples.
 
 # In[2]:
 
@@ -114,7 +115,7 @@ def genRandseq(statespace, nobs=100, generator='default', seed=None):
         ALPHABET OF THE STATE SPACE OF THE RANDOM VARIABLE. IF A STRING OR ARRAY-LIKE
         OBJECT, statespace IS TAKEN TO BE THE SET OF DISCRETE-VALUES
         COMPRISING THE STATE SPACE OF THE RANDOM VARIABLE.
-    N : INT, DEFAULT=100
+    nobs : INT, DEFAULT=100
         THE LENGTH OF THE RANDOM SEQUENCE TO BE GENERATED. DEFAULT IS 100 SYMBOLS.
     generator : INSTANCE OF numpy.random.Generator CLASS
         DEFAULT IS 'default' WHICH INIDICATES TO USE THE NUMPY default_rng()
@@ -147,6 +148,8 @@ def genRandseq(statespace, nobs=100, generator='default', seed=None):
         #expects generator to be an instance of the np.random.BitGenerator class
         rng = np.random.default_rng(generator)
 
+    # a is the cardinality of the statespace
+    # states is a numpy array of the states in the statespace
     if type(statespace) is int:
         a = statespace
         states = np.array([i for i in range(a)])
@@ -156,9 +159,10 @@ def genRandseq(statespace, nobs=100, generator='default', seed=None):
     elif type(statespace) is np.ndarray or tuple or list:
         a = len(statespace)
         states = np.array(statespace)
+    # get sequence of random integers to use to slice states
     randints = rng.integers(a, size=nobs)
+    # slice states with randints to get a sequence of random states
     seq = states[randints]
-    #print(states)
     return seq.tolist()
 
 
@@ -179,7 +183,7 @@ class Simulator:
     def __init__(self, func, nsim, seed=None):
         # update wrapper so that the metadata of the returned function is that of func, not the wrapper
         functools.update_wrapper(self, func)
-        # func is function to generate random sample from an RNG
+        # func is function to generate random sample using an RNG
         self.func = func
         # nsim is number of random samples to generate
         self.nsim = nsim
@@ -191,15 +195,17 @@ class Simulator:
         # initiate a random number generator using the PCG-64 bitgenerator
         self.rng = np.random.Generator(PCG64(self.ss))
         # empty dict to contain the bitgenerator states at each iteration
+        # selg.bgstateseq will become a dict of dicts
         self.bgstateseq = {'initial state' : self.rng.bit_generator.state}
 
     def __call__(self, *args, **kwargs):
         # define process to run when function decorated by Simulator is called
         # *args and **kwargs to be passed to the sample generating func stored in self.func
-        #print('inside __call__')
+        print('inside __call__')
         self.sample = []
         #def wrapper(self, *args, **kwargs):
         #print('inside wrapped simulate function')
+
         # set the 'generator' kwarg to be the RNG defined during __init__()
         kwargs['generator'] = self.rng
         for rep in range(self.nsim):
@@ -217,7 +223,10 @@ class Simulator:
 
 
 #set the simulator parameters
+
+# nsim is the number of independent samples to generate
 nsim = 20
+# seed for the RNG
 seed = None
 #set disttype. Options: 'markov', 'uniform', 'regular'
 disttype = 'uniform'
@@ -261,6 +270,7 @@ elif disttype == 'markov':
 simulatorstates = {}
 #empty dict to hold simulated datasets
 simulated = {}
+#empty list to hold entropy estimates (theta hats)
 estimates = []
 for n in nobs:
     if disttype == 'uniform':
@@ -274,7 +284,7 @@ for n in nobs:
     simulated[sampname] = samples
     values = []
     mvals = [1, 2, 3, 4]
-    sig2v = np.genfromtxt('sig2.csv', delimiter=',')
+    sig2v = SIG2V
     for i in range(len(samples)):
         vals = {'sample' : i}
         #print(samples[i])
@@ -309,121 +319,4 @@ sim_files.sim_est_dump(thetas, estimates, estsoutpath, *addinfo)
 
 # In[22]:
 
-
-fhand = open(estsoutpath)
-estimates_loaded= json.load(fhand)
-fhand.close()
-estimates_loaded
-
-
-# ## Read estimates dataset into a Pandas Dataframe
-
-# In[ ]:
-
-
-def monteCarloSE(biasarray):
-    nsim = len(biasarray)
-    squaredsum=np.square(biasarray).sum()
-    SE = np.sqrt(squaredsum*(1/(nsim*(nsim-1))))
-
-
-# In[ ]:
-
-
-data = estimates
-data = estimates_loaded
-
-
-# In[26]:
-
-
-theta_hats = pd.json_normalize(data=estimates, record_path=['values', 'theta_hats'],
-                               meta=["sampname", "nobs", ["values", "sample"]])
-theta_hats.set_index(['sampname', 'nobs', 'values.sample'])
-theta_hats
-
-
-# In[25]:
-
-
-theta_hatsload = pd.json_normalize(data=estimates_loaded, record_path=['Estimates', 'values', 'theta_hats'],
-                               meta=[['Estimates', "sampname"], ['Estimates', "nobs"], ['Estimates', "values", "sample"]])
-theta_hatsload
-
-
-# In[28]:
-
-
-renyi_hats = pd.json_normalize(data=estimates, record_path=['values', 'renyi_hats'],
-                               meta=["sampname", "nobs", ['values', 'sample']])
-renyi_hats
-
-
-# In[27]:
-
-
-renyi_hatsload = pd.json_normalize(data=estimates_loaded, record_path=['Estimates', 'values', 'renyi_hats'],
-                               meta=[['Estimates', "sampname"], ['Estimates', "nobs"], ['Estimates', "values", "sample"]])
-renyi_hatsload
-
-
-# In[15]:
-
-
-renyi_hats_long = pd.melt(renyi_hats, id_vars=['sampname', 'nobs', 'values.sample'],
-                          var_name='sig2', value_name='renyi2')
-renyi_hats_long.set_index(['sampname', 'nobs', 'values.sample'])
-
-
-# In[ ]:
-
-
-dfestswide = pd.merge(theta_hats, renyi_hats, how='outer', on=['sampname', 'nobs', 'values.sample'])
-dfestswide
-
-
-# In[ ]:
-
-
-dfests = pd.wide_to_long(dfestswide, 'kernelvar', i=['nobs', 'values.sample'], j='sig2', sep='_')
-dfests
-#print(dfests.columns)
-
-
-# In[ ]:
-
-
-dfindex = dfests.index
-dfindex
-
-
-# In[ ]:
-
-
-print(list(zip(('apen', 'sampen', 'renyi'), theta_iiduniform(a))))
-print(thetas)
-
-
-# In[ ]:
-
-
-#dftheta = pd.json_normalize(data=thetas)
-dftheta = pd.DataFrame(thetas, index=dfindex)
-dftheta.rename(columns={'apen': 'theta.apen', 'sampen': 'theta.sampen', 'renyi': 'theta.renyi'}, inplace=True)
-dftheta
-
-
-# In[ ]:
-
-
-df = pd.concat([dfests, dftheta], axis=1)
-df[df['nobs']== 100]
-
-
-# In[ ]:
-
-
-dfests = pd.json_normalize(data=estimates, record_path=['values', 'theta_hats'],
-                       meta=["sampname", "nobs", ["values", "m"]])
-meta=["sampname", "nobs", ["values", "sample"]
 
