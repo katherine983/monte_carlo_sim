@@ -95,101 +95,89 @@ def cgr_renyi(data, sig2v=SIG2V, A=None, refseq=None, Plot=False):
     renyi = pyusm.usm_entropy.renyi2usm(cgr_coords, sig2v, refseq=refseq, Plot=Plot, deep_copy=False)
     return renyi
 
+def run():
+    # generic routine for generating series of random samples
 
-# ## Create generic routine for generating series of random samples
+    #set the simulator parameters
 
-#set the simulator parameters
-
-# nsim is the number of independent samples to generate
-nsim = 20
-# seed for the RNG
-seed = None
-#set disttype. Options: 'markov', 'uniform', 'regular'
-disttype = 'uniform'
-if disttype == 'uniform':
-    func = genRandseq
-elif disttype == 'markov':
-    func = gen_sample
-
-
-#initiate simulator to handle nsim sequential simulations of the random sample func using the same RNG
-sim = Simulator(func, nsim, seed)
-
-
-#set sample parameters
-
-#set size of alphabet of discrete-valued random variable
-a = 4
-#set of sample sizes (sequence lengths) to generate during each iteration
-nobs = [50, 100]
-#distribution function (optional), use to define a probability distribution for generating the random samples
-distname = None
-#markov order, to be used later
-mc_order = None
-#markov transition matrix object, placeholder
-MC_model =  None
-#set of values making up the discrete-valued state space of the random variable X
-states = [chr(ord('a')+i) for i in range(a)]
-
-
-
-
-#create a dict of the true estimand values
-if disttype == 'uniform':
-    distname = 'iiduni'
-    thetas = dict(list(zip(('apen', 'sampen', 'renyi'), theta_iiduniform(a))))
-elif disttype == 'markov':
-    distname == ''
-    thetas = dict(list(zip(('apen', 'sampen', 'renyi'), theta_markov(MC_model))))
-#create dict to keep a log of bitgenerator state sequences for each sample
-simulatorstates = {}
-#empty dict to hold simulated datasets
-simulated = {}
-#empty list to hold entropy estimates (theta hats)
-estimates = []
-for n in nobs:
+    # nsim is the number of independent samples to generate
+    nsim = 20
+    # seed for the RNG
+    seed = None
+    #set disttype. Options: 'markov', 'uniform', 'regular'
+    disttype = 'uniform'
     if disttype == 'uniform':
-        samples = sim(states, n)
+        func = genRandseq
     elif disttype == 'markov':
-        #add alphabet size, a, to n as the first a states will be dropped from the sample
-        T = n + a
-        samples = sim(MC_model, states, n)
-    sampname = f'{distname}A{a}N{n}'
-    simulatorstates[sampname] = sim.bgstateseq
-    simulated[sampname] = samples
-    values = []
-    mvals = [1, 2, 3, 4]
-    sig2v = SIG2V
-    for i in range(len(samples)):
-        vals = {'sample' : i}
-        #print(samples[i])
-        renyis = cgr_renyi(samples[i], sig2v, A=states, refseq=f'{sampname}i{i}', Plot=False)
-        mests = []
-        for m in mvals:
-            est = {'m' : m, 'apen' : discreteMSE.apen(samples[i], m)[0], 'sampen' : discreteMSE.sampen(samples[i], m, refseq=f'{sampname}i{i}')[0]}
-            mests.append(est)
-        vals.update({'renyi_hats' : [renyis,], 'theta_hats' : mests})
-        values.append(vals)
-    estimates.append({'sampname': sampname, 'nobs' : n, 'values' : values})
+        func = gen_sample
+
+
+    #initiate simulator to handle nsim sequential simulations of the random sample func using the same RNG
+    sim = Simulator(func, nsim, seed)
+
+
+    #set sample parameters
+
+    #set size of alphabet of discrete-valued random variable
+    a = 4
+    #set of sample sizes (sequence lengths) to generate during each iteration
+    nobs = [50, 100]
+    #distribution function (optional), use to define a probability distribution for generating the random samples
+    distname = None
+    #markov order, to be used later
+    mc_order = None
+    #markov transition matrix object, placeholder
+    MC_model =  None
+    #set of values making up the discrete-valued state space of the random variable X
+    states = [chr(ord('a')+i) for i in range(a)]
+
+    #create a dict of the true estimand values
+    if disttype == 'uniform':
+        distname = 'iiduni'
+        thetas = dict(list(zip(('apen', 'sampen', 'renyi'), theta_iiduniform(a))))
+    elif disttype == 'markov':
+        distname == ''
+        thetas = dict(list(zip(('apen', 'sampen', 'renyi'), theta_markov(MC_model))))
+    #create dict to keep a log of bitgenerator state sequences for each sample
+    simulatorstates = {}
+    #empty dict to hold simulated datasets
+    simulated = {}
+    #empty list to hold entropy estimates (theta hats)
+    estimates = []
+    for n in nobs:
+        if disttype == 'uniform':
+            samples = sim(states, n)
+        elif disttype == 'markov':
+            #add alphabet size, a, to n as the first a states will be dropped from the sample
+            T = n + a
+            samples = sim(MC_model, states, n)
+        sampname = f'{distname}A{a}N{n}'
+        simulatorstates[sampname] = sim.bgstateseq
+        simulated[sampname] = samples
+        values = []
+        mvals = [1, 2, 3, 4]
+        sig2v = SIG2V
+        for i in range(len(samples)):
+            vals = {'sample' : i}
+            #print(samples[i])
+            renyis = cgr_renyi(samples[i], sig2v, A=states, refseq=f'{sampname}i{i}', Plot=False)
+            mests = []
+            for m in mvals:
+                est = {'m' : m, 'apen' : discreteMSE.apen(samples[i], m)[0], 'sampen' : discreteMSE.sampen(samples[i], m, refseq=f'{sampname}i{i}')[0]}
+                mests.append(est)
+            vals.update({'renyi_hats' : [renyis,], 'theta_hats' : mests})
+            values.append(vals)
+        estimates.append({'sampname': sampname, 'nobs' : n, 'values' : values})
 
 
 
-#assert estimates is list of dicts
+    #assert estimates is list of dicts
 
-
-# In[19]:
-
-
-#save simulated datasets as a json file
-#make list to contain the extra args to feed to sim_files.sim_data_dump()
-#in the order [alphabet, data generating distribution, Markov order]
-addinfo = [a, distname, mc_order]
-outpath = sim_files.create_output_file_path(out_name=f'{distname}A{a}Nsim{nsim}_{datetime.date.today().isoformat()}.json', overide=True)
-sim_files.sim_data_dump(simulated, simulatorstates, outpath, *addinfo)
-estsoutpath = sim_files.create_output_file_path(out_name=f'{distname}A{a}Nsim{nsim}_{datetime.date.today().isoformat()}_estimates.json', overide=True)
-sim_files.sim_est_dump(thetas, estimates, estsoutpath, *addinfo)
-
-
-# In[22]:
-
-
+    #save simulated datasets as a json file
+    #make list to contain the extra args to feed to sim_files.sim_data_dump()
+    #in the order [alphabet, data generating distribution, Markov order]
+    addinfo = [a, distname, mc_order]
+    outpath = sim_files.create_output_file_path(out_name=f'{distname}A{a}Nsim{nsim}_{datetime.date.today().isoformat()}.json', overide=True)
+    sim_files.sim_data_dump(simulated, simulatorstates, outpath, *addinfo)
+    estsoutpath = sim_files.create_output_file_path(out_name=f'{distname}A{a}Nsim{nsim}_{datetime.date.today().isoformat()}_estimates.json', overide=True)
+    sim_files.sim_est_dump(thetas, estimates, estsoutpath, *addinfo)
