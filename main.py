@@ -92,7 +92,7 @@ def cgr_renyi(data, sig2v=SIG2V, A=None, refseq=None, Plot=False):
     renyi = pyusm.usm_entropy.renyi2usm(cgr_coords, sig2v, refseq=refseq, Plot=Plot, deep_copy=False)
     return renyi
 
-def run(nsim, nobs, disttype, seed=None):
+def run(nsim, nobs, disttype, outroot, seed=None):
     """
     generic routine for generating series of random samples, computing entropy
     statistics from each sample and saving all data to json files. For each number
@@ -225,10 +225,10 @@ def run(nsim, nobs, disttype, seed=None):
         #make list to contain the extra args to feed to sim_files.sim_data_dump()
         #in the order [alphabet, data generating distribution, Markov order]
         addinfo = [a, distname, mc_order]
-        outpath = sim_files.create_output_file_path(out_dir=f'simulation_output/simulated_{simdate}', out_name=f'{distname}A{a}Nsim{nsim}_{now}.json', overide=False)
+        outpath = sim_files.create_output_file_path(root_dir=outroot, out_dir=f'simulation_output/simulated_{simdate}', out_name=f'{distname}A{a}Nsim{nsim}_{now}.json', overide=False)
         sim_files.sim_data_dump(simulated, simulatorstates, outpath, *addinfo)
         # save entropy estimates as a json file
-        estsoutpath = sim_files.create_output_file_path(out_dir=f'simulation_output/estimates_{simdate}', out_name=f'{distname}A{a}Nsim{nsim}_{now}_estimates.json', overide=False)
+        estsoutpath = sim_files.create_output_file_path(root_dir=outroot, out_dir=f'simulation_output/estimates_{simdate}', out_name=f'{distname}A{a}Nsim{nsim}_{now}_estimates.json', overide=False)
         sim_files.sim_est_dump(nsim, thetas, estimates, estsoutpath, *addinfo)
     
     print(f"Simulations completed {datetime.datetime.now().isoformat(timespec='minutes')}")
@@ -242,9 +242,11 @@ if __name__ == "__main__":
                         help='list of sample sizes to generate')
     parser.add_argument('-d', '--disttype', type=str, choices=['uniform', 'markov'],
                         required=True, help='distribution type to sample from')
+    parser.add_argument('-o', '--outroot',
+                        required=True, help='Path for output files to go')
     parser.add_argument('--seed', type=str, help='seed for RNG')
     args = parser.parse_args()
     # print(args.nsim, type(args.nsim))
     # print(args.nobs, type(args.nobs))
     # print(args.disttype, type(args.disttype))
-    run(args.nsim, args.nobs, args.disttype, args.seed)
+    run(args.nsim, args.nobs, args.disttype, args.outroot, args.seed)

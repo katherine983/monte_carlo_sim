@@ -14,10 +14,11 @@
 
 
 echo "I am job $SLURM_JOBID running on nodes $SLURM_JOB_NODELIST"
-myscratch="$(mkworkspace -n $SLURM_JOBID)"
+export myscratch="$(mkworkspace -n $SLURM_JOBID)"
+echo $myscratch
 module load miniconda3		# Load software module from Kamiak repository
 conda activate mcenv
-srun -l python main.py 2 --nobs 200 500	# Each task runs this program (total 1 times)
+srun -l python main.py 2 --nobs 200	-d uniform -o $myscratch # Each task runs this program (total 1 times)
 				# Each srun is a job step, and spawns -ntasks
 conda deactivate
 echo "Completed job on node $HOSTNAME"
