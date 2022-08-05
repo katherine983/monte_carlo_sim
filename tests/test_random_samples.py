@@ -33,7 +33,6 @@ def set_functype(disttype):
 #initiate simulator to handle nsim sequential simulations of the random sample func using the same RNG
 #sim = Simulator(func, nsim, seed)
 
-
 @pytest.fixture
 def args_for_genRandseq(alpha_statespace, default_nobs, seed):
     return alpha_statespace, {'nobs' : default_nobs, 'generator':'default', 'seed' : seed}

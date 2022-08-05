@@ -10,6 +10,7 @@ from pathlib import Path
 import sys
 
 
+
 def create_output_file_path(root_dir=None, out_dir='sim_data', out_name=None, overide=False):
     """
     Create path object for the output filepath for the output file.
@@ -48,7 +49,7 @@ def get_data_file_path(root_dir=None, out_dir='sim_data', out_name=None):
     out_dir -- string literal representing target directory to be appended to root if root is not target directory
     out_name -- string literal representing the filename for the output file
 
-    Return : path object to save simulation data in
+    Return : path object or list of path objects to retrieve or save simulation data in
 
     """
     if not root_dir:
@@ -57,12 +58,14 @@ def get_data_file_path(root_dir=None, out_dir='sim_data', out_name=None):
     if not dirpath.is_dir():
         dirpath.mkdir(parents=True)
     if not out_name:
-        out_name = f"simdata_{datetime.datetime.now().isoformat(timespec='seconds')}.txt"
-    out_path = dirpath / out_name
-    if not out_path.exists():
-        raise Exception("File does not exist. Please enter existing filepath.")
+        out_paths = list(dirpath.glob('*.json'))
+        return out_paths
     else:
-        return out_path
+        out_path = dirpath / out_name
+        if not out_path.exists():
+            raise Exception("File does not exist. Please enter existing filepath.")
+        else:
+            return out_path
 
 def sim_data_dump(simulated, states, outpath, *args, **kwargs):
     """Writes MC matrix data to a json file. Opens the file, writes, and closes it.
