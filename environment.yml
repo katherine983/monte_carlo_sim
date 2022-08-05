@@ -1,4 +1,4 @@
-name: monte-carlo-env
+name: mcenv
 
 dependencies:
     - matplotlib=3.3

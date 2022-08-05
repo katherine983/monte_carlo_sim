@@ -9,15 +9,11 @@ import argparse
 sys.path.append(pathlib.Path(__file__).parent)
 #print(sys.path)
 import datetime
-
 import json
 import numpy as np
-import pandas as pd
 import pyusm
 import discreteMSE
-#from discreteMSE.discreteMSE.entropy import apen, sampen
-from mc_measures.gen_mc_transition import GenMarkovTransitionProb as MCmatrix
-from mc_measures.gen_mc_transition import gen_model, get_model, gen_sample
+from mc_measures.gen_mc_transition import get_model, gen_sample
 from mc_measures import mc_entropy
 from sim_utils import sim_files
 from sim_utils.random_samples import genRandseq, Simulator
