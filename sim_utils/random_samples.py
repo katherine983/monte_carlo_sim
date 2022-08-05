@@ -99,7 +99,7 @@ class Simulator:
     def __call__(self, *args, **kwargs):
         # define process to run when function decorated by Simulator is called
         # *args and **kwargs to be passed to the sample generating func stored in self.func
-        print('inside __call__')
+        #print('inside __call__')
         self.sample = []
         #def wrapper(self, *args, **kwargs):
         #print('inside wrapped simulate function')
@@ -109,7 +109,7 @@ class Simulator:
         for rep in range(self.nsim):
             self.bgstateseq[rep] = self.rng.bit_generator.state
             seq = self.func(*args, **kwargs)
-            print(len(seq))
+            #print(len(seq))
             self.sample.append(seq)
         self.bgstateseq['end'] = self.rng.bit_generator.state
         # returns list of lists
