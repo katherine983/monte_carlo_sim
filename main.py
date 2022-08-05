@@ -7,12 +7,11 @@ import sys, pathlib
 import argparse
 #print(sys.path)
 sys.path.append(pathlib.Path(__file__).parent)
-print(sys.path)
+#print(sys.path)
 import datetime
 
 import json
 import numpy as np
-from numpy.random import PCG64
 import pandas as pd
 import pyusm
 import discreteMSE
@@ -121,26 +120,27 @@ def run(nsim, nobs, disttype, seed=None):
     -------
     None.
     """
-    try:
-        nsim = int(nsim)
-        assert type(nsim) is int, "Please provide valid integer for nsim."
-    except ValueError:
-        print("Please provide valid integer for nsim.")
-        raise
-    except AssertionError as err:
-        print("Failed assertion: {}".format(err))
-        raise
+    # get iso string of date when simulation begins to use for output directories
+    simdate = datetime.date.today().isoformat()
+    # try:
+    #     nsim = int(nsim)
+    #     assert type(nsim) is int, "Please provide valid integer for nsim."
+    # except ValueError:
+    #     print("Please provide valid integer for nsim.")
+    #     raise
+    # except AssertionError as err:
+    #     print("Failed assertion: {}".format(err))
+    #     raise
         
-    try:
-        nobs = int(nobs)
-        
-        assert type(nobs) is int, "Please provide valid integer for nobs."
-    except ValueError:
-        print("Please provide valid integer for nobs.")
-        raise
-    except AssertionError as err:
-        print("Failed assertion: {}".format(err))
-        raise
+    # try:
+    #     nobs = [int(nobs[i]) for i in range(len(nobs)):  
+    #     assert type(n) is int, "Please provide valid integer for nobs."
+    # except ValueError:
+    #     print("Please provide valid integer for nobs.")
+    #     raise
+    # except AssertionError as err:
+    #     print("Failed assertion: {}".format(err))
+    #     raise
     
     # set up simulation parameters based on disttype
     if disttype == 'uniform':
@@ -148,6 +148,7 @@ def run(nsim, nobs, disttype, seed=None):
 
         # get list of file paths
         paramfiles =  sim_files.get_data_file_path(out_dir='input_data/iiduniform')
+        print(paramfiles, type(paramfiles))
         
     elif disttype == 'markov':
         func = gen_sample
@@ -158,7 +159,8 @@ def run(nsim, nobs, disttype, seed=None):
                         for allowed distribution types.""")
                         
 
-    #initiate simulator to handle nsim sequential simulations of the random sample func using the same RNG
+    # initiate simulator to handle nsim sequential simulations of the random sample func using the same RNG
+    # simulator initiated with the PCG-64 bitgenerator
     sim = Simulator(func, nsim, seed)
     
     #set sample parameters
@@ -166,8 +168,9 @@ def run(nsim, nobs, disttype, seed=None):
         if disttype == 'uniform':
             # get saved sample parameters for sample generating function from file
             with open(file, 'r') as fhand:
-                #set size of alphabet of discrete-valued random variable
-                a = int(fhand.read())
+                params = json.load(fhand)
+            #set size of alphabet of discrete-valued random variable
+            a = int(params['a'])
             distname = 'iiduni'
             #set of values making up the discrete-valued state space of the random variable X
             states = [chr(ord('a')+i) for i in range(a)]
@@ -220,24 +223,32 @@ def run(nsim, nobs, disttype, seed=None):
         #assert estimates is list of dicts
     
         #save simulated datasets as a json file
+        
+        # datetime to append to output file names
+        now = datetime.datetime.now().strftime('%Y-%m-%dT%H%M%S')
         #make list to contain the extra args to feed to sim_files.sim_data_dump()
         #in the order [alphabet, data generating distribution, Markov order]
         addinfo = [a, distname, mc_order]
-        outpath = sim_files.create_output_file_path(out_dir=f'simulation_output/simulated_{datetime.date.today().isoformat()}', out_name=f'{distname}A{a}Nsim{nsim}_{datetime.date.today().isoformat()}.json', overide=True)
+        outpath = sim_files.create_output_file_path(out_dir=f'simulation_output/simulated_{simdate}', out_name=f'{distname}A{a}Nsim{nsim}_{now}.json', overide=False)
         sim_files.sim_data_dump(simulated, simulatorstates, outpath, *addinfo)
         # save entropy estimates as a json file
-        estsoutpath = sim_files.create_output_file_path(out_dir=f'simulation_output/estimates_{datetime.date.today().isoformat()}', out_name=f'{distname}A{a}Nsim{nsim}_{datetime.date.today().isoformat()}_estimates.json', overide=True)
-        sim_files.sim_est_dump(thetas, estimates, estsoutpath, *addinfo)
-        return
+        estsoutpath = sim_files.create_output_file_path(out_dir=f'simulation_output/estimates_{simdate}', out_name=f'{distname}A{a}Nsim{nsim}_{now}_estimates.json', overide=False)
+        sim_files.sim_est_dump(nsim, thetas, estimates, estsoutpath, *addinfo)
+    
+    print(f"Simulations completed {datetime.datetime.now().isoformat(timespec='minutes')}")
+    return
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run entropy simulations.')
     parser.add_argument('nsim', type=int,
                         help='number of samples to generate')
-    parser.add_argument('nobs', type=list,
-                        help='size of samples to generate')
-    parser.add_argument('disttype', type=str,
-                        help='distribution type to sample from')
+    parser.add_argument('--nobs', nargs='+', type=int, required=True,
+                        help='list of sample sizes to generate')
+    parser.add_argument('-d', '--disttype', type=str, choices=['uniform', 'markov'],
+                        required=True, help='distribution type to sample from')
     parser.add_argument('--seed', type=str, help='seed for RNG')
     args = parser.parse_args()
+    # print(args.nsim, type(args.nsim))
+    # print(args.nobs, type(args.nobs))
+    # print(args.disttype, type(args.disttype))
     run(args.nsim, args.nobs, args.disttype, args.seed)

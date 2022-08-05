@@ -103,12 +103,14 @@ def sim_data_dump(simulated, states, outpath, *args, **kwargs):
         data.update({'Date_created' : datetime.datetime.now().isoformat(timespec='seconds')})
         json.dump(data, fouthand, **kwargs)
 
-def sim_est_dump(thetas, estimates, outpath, *args, **kwargs):
+def sim_est_dump(nsim, thetas, estimates, outpath, *args, **kwargs):
     """
     Function to save Monte Carlo simulation estimand estimates to a json file.
 
     Parameters
     ----------
+    nsim : INT
+        NUMBER OF SIMULATED SAMPLES PER DISTRIBUTION PARAMETER SETUP
     thetas : DICT OR OTHER JSON SERIALIZABLE OBJECT
         DICT CONTAINING THE ANALYTICALLY DERIVED TRUE ESTIMAND VALUES.
     estimates : JSON SERIALIZABLE OBJECTS (LIST, DICT)
@@ -136,7 +138,7 @@ def sim_est_dump(thetas, estimates, outpath, *args, **kwargs):
     if args[2]:
         addons['Markov Order'] = args[2]
     with open(outpath, 'w+') as fouthand:
-        data = {'Thetas' : thetas, 'Estimates' : estimates}
+        data = {'nsim' : nsim, 'Thetas' : thetas, 'Estimates' : estimates}
         data.update(addons)
         data.update({'Date_created' : datetime.datetime.now().isoformat(timespec='seconds')})
         json.dump(data, fouthand, **kwargs)

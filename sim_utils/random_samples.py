@@ -109,6 +109,7 @@ class Simulator:
         for rep in range(self.nsim):
             self.bgstateseq[rep] = self.rng.bit_generator.state
             seq = self.func(*args, **kwargs)
+            print(len(seq))
             self.sample.append(seq)
         self.bgstateseq['end'] = self.rng.bit_generator.state
         # returns list of lists
