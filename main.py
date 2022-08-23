@@ -11,6 +11,7 @@ sys.path.append(pathlib.Path(__file__).parent)
 import datetime
 import json
 import numpy as np
+#from memory_profiler import profile
 import pyusm
 import discreteMSE
 from mc_measures.gen_mc_transition import get_model, gen_sample
@@ -92,7 +93,8 @@ def cgr_renyi(data, sig2v=SIG2V, A=None, refseq=None, Plot=False):
     renyi = pyusm.usm_entropy.renyi2usm(cgr_coords, sig2v, refseq=refseq, Plot=Plot, deep_copy=False)
     return renyi
 
-def run(nsim, nobs, disttype, outroot, seed=None):
+#@profile
+def run(nsim, nobs, disttype, outroot, jobarray, jobid=None, seed=None):
     """
     generic routine for generating series of random samples, computing entropy
     statistics from each sample and saving all data to json files. For each number
@@ -108,6 +110,12 @@ def run(nsim, nobs, disttype, outroot, seed=None):
     disttype : STRING
         INDICATE THE TYPE OF PROBABILITY DISTRIBUTION TO USE TO GENERATE THE
         RANDOM SAMPLES. Options: 'markov', 'uniform'
+    outroot : STRING
+        PATH TO THE OUTPUT DIRECTORY
+    jobarray : INT
+        FOR SLURM ARRAY JOBS, EXPECTS $SLURM_ARRAY_TASK_ID
+    jobid : INT or NONE
+        FOR SLURM JOB ID. Default is None. If default, jobid will be set to datetime.datetime.now()
     seed : INT, optional.
         SEED IS THE SEED FOR THE RNG, CAN BE AN INTEGER (128-BIT RECOMMENDED)
         OR NONE. IF NONE THEN RNG SEED WILL BE GENERATED FROM THE SYSTEM ENTROPY.
@@ -118,6 +126,7 @@ def run(nsim, nobs, disttype, outroot, seed=None):
     """
     # get iso string of date when simulation begins to use for output directories
     simdate = datetime.date.today().isoformat()
+    print(f"Beginning simulation run at {datetime.datetime.now().isoformat(timespec='minutes')}")
     # try:
     #     nsim = int(nsim)
     #     assert type(nsim) is int, "Please provide valid integer for nsim."
@@ -137,24 +146,36 @@ def run(nsim, nobs, disttype, outroot, seed=None):
     # except AssertionError as err:
     #     print("Failed assertion: {}".format(err))
     #     raise
-    
+    multifile = False
+
     # set up simulation parameters based on disttype
     if disttype == 'uniform':
         func = genRandseq
-
-        # get list of file paths
-        paramfiles =  sim_files.get_data_file_path(out_dir='input_data/iiduniform')
-        print(paramfiles, type(paramfiles))
         
+        if multifile:
+            # get list of file paths
+            paramfiles =  sim_files.get_data_file_path(out_dir='input_data/iiduniform')
+        else:
+            # get data file path
+            paramfiles = sim_files.get_data_file_path(out_dir='input_data/iiduniform', 
+                                                      out_name=f'iiduniform_{jobarray}.json')
+            paramfiles = [paramfiles]
+            
     elif disttype == 'markov':
         func = gen_sample
-        # get list of file paths
-        paramfiles = sim_files.get_data_file_path(out_dir='input_data/mc_matrices')
+        
+        if multifile:
+            # get list of file paths
+            paramfiles = sim_files.get_data_file_path(out_dir='input_data/mc_matrices')
+        else:
+            # get data file path
+            paramfiles = sim_files.get_data_file_path(out_dir='input_data/mc_matrices', 
+                                                      out_name=f'markov_{jobarray}.json')
+            paramfiles = [paramfiles]
     else:
         raise Exception("""Unknown disttype. Please check spelling or documentation
                         for allowed distribution types.""")
-                        
-
+                            
     # initiate simulator to handle nsim sequential simulations of the random sample func using the same RNG
     # simulator initiated with the PCG-64 bitgenerator
     sim = Simulator(func, nsim, seed)
@@ -192,6 +213,7 @@ def run(nsim, nobs, disttype, outroot, seed=None):
         #empty list to hold entropy estimates (theta hats)
         estimates = []
         for n in nobs:
+            print(f"Beginning simulations for sample sizes {n}")
             if disttype == 'uniform':
                 samples = sim(states, n)
             elif disttype == 'markov':
@@ -220,21 +242,31 @@ def run(nsim, nobs, disttype, outroot, seed=None):
     
         #save simulated datasets as a json file
         
-        # datetime to append to output file names
-        now = datetime.datetime.now().strftime('%Y-%m-%dT%H%M%S')
+        #if jobid is None output file names will be appended with current datetime
+        if jobid is None:
+            # datetime to append to output file names
+            jobid = datetime.datetime.now().strftime('%Y-%m-%dT%H%M%S')
         #make list to contain the extra args to feed to sim_files.sim_data_dump()
         #in the order [alphabet, data generating distribution, Markov order]
         addinfo = [a, distname, mc_order]
-        outpath = sim_files.create_output_file_path(root_dir=outroot, out_dir=f'simulation_output/simulated_{simdate}', out_name=f'{distname}A{a}Nsim{nsim}_{now}.json', overide=False)
+        outpath = sim_files.create_output_file_path(root_dir=outroot, 
+                                                    out_dir=f'simulation_output/simulated_{simdate}', 
+                                                    out_name=f'{distname}A{a}Nsim{nsim}_{jobid}.json', 
+                                                    overide=False)
         sim_files.sim_data_dump(simulated, simulatorstates, outpath, *addinfo)
         # save entropy estimates as a json file
-        estsoutpath = sim_files.create_output_file_path(root_dir=outroot, out_dir=f'simulation_output/estimates_{simdate}', out_name=f'{distname}A{a}Nsim{nsim}_{now}_estimates.json', overide=False)
+        estsoutpath = sim_files.create_output_file_path(root_dir=outroot, 
+                                                        out_dir=f'simulation_output/estimates_{simdate}', 
+                                                        out_name=f'{distname}A{a}Nsim{nsim}_{jobid}_estimates.json', 
+                                                        overide=False)
         sim_files.sim_est_dump(nsim, thetas, estimates, estsoutpath, *addinfo)
     
     print(f"Simulations completed {datetime.datetime.now().isoformat(timespec='minutes')}")
     return
 
 if __name__ == "__main__":
+    import os
+    print("Number of CPUs available:", os.environ["OMP_NUM_THREADS"])
     parser = argparse.ArgumentParser(description='Run entropy simulations.')
     parser.add_argument('nsim', type=int,
                         help='number of samples to generate')
@@ -242,6 +274,7 @@ if __name__ == "__main__":
                         help='list of sample sizes to generate')
     parser.add_argument('-d', '--disttype', type=str, choices=['uniform', 'markov'],
                         required=True, help='distribution type to sample from')
+    parser.add_argument('--jobarray',  type=int, help='slurm array task id')
     parser.add_argument('-o', '--outroot',
                         required=True, help='Path for output files to go')
     parser.add_argument('--seed', type=str, help='seed for RNG')
@@ -249,4 +282,4 @@ if __name__ == "__main__":
     # print(args.nsim, type(args.nsim))
     # print(args.nobs, type(args.nobs))
     # print(args.disttype, type(args.disttype))
-    run(args.nsim, args.nobs, args.disttype, args.outroot, args.seed)
+    run(args.nsim, args.nobs, args.disttype, args.outroot, args.jobarray, args.seed)

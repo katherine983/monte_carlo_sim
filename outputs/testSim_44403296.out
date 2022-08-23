@@ -1,0 +1,18 @@
+Starting job array 2 for 44402708 running on nodes sn11
+Output saved in: /scratch/user/katherine.graham/20220822_195206
+0: Number of CPUs available: 10
+0: Beginning simulation run at 2022-08-22T22:12
+0: Beginning simulations for sample sizes 200
+0: The sequence iiduniA10N200i1 is unique, there were no m+1-length matches.
+0: Undefined 4 0
+0: The sequence iiduniA10N200i3 is unique, there were no m+1-length matches.
+0: Undefined 10 0
+0: The sequence iiduniA10N200i4 is unique, there were no m+1-length matches.
+0: Undefined 4 0
+0: Beginning simulations for sample sizes 1000
+0: Beginning simulations for sample sizes 5000
+0: Beginning simulations for sample sizes 7500
+0: Beginning simulations for sample sizes 10000
+0: Beginning simulations for sample sizes 20000
+0: Simulations completed 2022-08-22T23:58
+Completed job on node sn11

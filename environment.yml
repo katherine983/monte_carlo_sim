@@ -4,7 +4,6 @@ dependencies:
     - matplotlib=3.3
     - numpy=1.20
     - pandas=1.2
-    - pathlib=1.0
     - pip=21.0
     - pytest=6.2
     - python=3.8

@@ -1,0 +1,12 @@
+Starting job array 1 for 44402708 running on nodes sn11
+Output saved in: /scratch/user/katherine.graham/20220822_195206
+0: Number of CPUs available: 10
+0: Beginning simulation run at 2022-08-22T20:26
+0: Beginning simulations for sample sizes 200
+0: Beginning simulations for sample sizes 1000
+0: Beginning simulations for sample sizes 5000
+0: Beginning simulations for sample sizes 7500
+0: Beginning simulations for sample sizes 10000
+0: Beginning simulations for sample sizes 20000
+0: Simulations completed 2022-08-22T22:12
+Completed job on node sn11
