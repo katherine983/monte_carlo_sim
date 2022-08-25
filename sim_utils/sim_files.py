@@ -132,7 +132,7 @@ def sim_est_dump(nsim, thetas, estimates, outpath, *args, **kwargs):
     """
     addons = {'Alphabet' : None, 'Name of Generating Distribution' : None, 'Markov Order' : None}
     if args[0]:
-        addons['Alphabete'] = args[0]
+        addons['Alphabet'] = args[0]
     if args[1]:
         addons['Name of Generating Distribution'] = args[1]
     if args[2]:

@@ -48,7 +48,7 @@ def theta_iiduniform(a, sig2v=SIG2V):
     renyi_cont = {}
     for sig2 in sig2v:
         s2 = np.array(sig2, dtype=np.float64)
-        rn2 = a * ((1/(-12*s2)) - np.log((2*np.sqrt(s2)*np.sqrt(np.pi))))
+        rn2 = a * ((1/(-24*s2)) - np.log((2*np.sqrt(s2)*np.sqrt(np.pi))))
         renyi_cont[sig2] = rn2
     return dict(list(zip(('apen', 'sampen', 'renyi_disc', 'renyi_cont'), (apen, sampen, renyi_disc, renyi_cont))))
 
