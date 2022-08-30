@@ -15,3 +15,4 @@ import main
 
 #run from repo root using module flag: >python -m pytest
 
+#test length of each entry in simulaterstates is the same length for each level of nobs

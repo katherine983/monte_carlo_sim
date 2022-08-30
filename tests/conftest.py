@@ -16,7 +16,7 @@ def alpha_statespace():
 def default_nobs():
     return 20
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def seed():
     # seed generated on 8/3/22 from np.random.SeedSequence().entropy
     seed = 264402757879708171514988060933040011692
