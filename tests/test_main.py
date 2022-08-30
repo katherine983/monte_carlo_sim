@@ -11,6 +11,7 @@ import sys
 # curpath = pathlib.Path()
 # sys.path.append(pathlib.Path(__file__).parents[1])
 # repr(sys.path)
-from monte_carlo_sim import main
+import main
 
+#run from repo root using module flag: >python -m pytest
 
