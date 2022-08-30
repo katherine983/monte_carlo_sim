@@ -17,6 +17,7 @@ from mc_measures.gen_mc_transition import gen_model, get_model, gen_sample
 #     #seed for the RNG
 #     return 70296455059587591496887789747131377293
 
+default_nobs_list = [20, 50, 100]
 def set_functype(disttype):
     #set disttype. Options: 'markov', 'uniform', 'regular'
     disttype = 'uniform'
@@ -92,20 +93,30 @@ class TestSimulator:
         return nsim, seed
     
     @pytest.fixture(scope='function')
-    def genRandseq_simulator(self, nsim, seed):
+    def genRandseq_simulator(self, simulator_params):
         # create instance of Simulator class
-        randseq_simulator = Simulator(genRandseq, nsim, seed)
+        randseq_simulator = Simulator(genRandseq, *simulator_params)
+        #returns a simulator twice, for each parametrized nsim value from simulator_params
         return randseq_simulator
     
-    @pytest.fixture(scope='function')
-    def genRandseq
+    @pytest.fixture(scope='class')
+    def genRandseq_simulator_clone(self, simulator_params):
+        # second instance of Simulator class to use as comparison
+        randseq_simulator = Simulator(genRandseq, *simulator_params)
+        return randseq_simulator
+    
+    @pytest.fixture(scope='class')
+    def genRandseq_samples(self, alpha4_statespace, default_nobs, genRandseq_simulator_clone):
+        # samples generated from a Simulator instance initiated with genRandseq and simulator_params
+        sample = genRandseq_simulator_clone(alpha4_statespace, nobs=default_nobs)
+        return sample
     
     def test_simulator_seed(self, simulator_params, genRandseq_simulator):
         simulator1 = Simulator(genRandseq, *simulator_params)
         simulator2 = Simulator(genRandseq, *simulator_params)
         assert simulator1.seed == simulator2.seed
         
-    def test_simulator_seed(self, simulator_params, genRandseq_simulator):
+    def test_simulator_seed2(self, simulator_params, genRandseq_simulator):
         new_simulator = Simulator(genRandseq, *simulator_params)
         assert genRandseq_simulator.seed == new_simulator.seed
         
@@ -114,9 +125,50 @@ class TestSimulator:
         simulator_clone = Simulator(genRandseq, nsim, seed=genRandseq_simulator.seed)
         assert genRandseq_simulator.seed == simulator_clone.seed
         
-    def test_
-    #test that simulators with different generating functions initiated with same seed have same state sequences
+    def test_simulator_initialstate(self, simulator_params, genRandseq_simulator):
+        new_simulator = Simulator(genRandseq, *simulator_params)
+        assert genRandseq_simulator.bgstateseq['initial state'] == new_simulator.bgstateseq['initial state']
+        
+    def test_sample_lengths(self, simulator_params, alpha4_statespace, default_nobs, genRandseq_simulator):
+        # test that each sample generated from Simulator instances initiated with the same seeds have the same state sequence
+        new_simulator = Simulator(genRandseq, *simulator_params)
+        # gen nsim samples of length nobs from each simulator instance
+        sample1 = genRandseq_simulator(alpha4_statespace, nobs=default_nobs)
+        sample1_array = np.array(sample1)
+        sample2 = new_simulator(alpha4_statespace, nobs=default_nobs)
+        sample2_array = np.array(sample2)
+        assert np.array_equal(sample1_array, sample2_array)
+        
+    def test_simulator_states_same(self, simulator_params, alpha4_statespace, default_nobs, genRandseq_simulator):
+        # test that each sample generated from Simulator instances initiated with the same seeds have the same state sequence
+        new_simulator = Simulator(genRandseq, *simulator_params)
+        # gen nsim samples of length nobs from each simulator instance
+        sample1 = genRandseq_simulator(alpha4_statespace, nobs=default_nobs)
+        sample2 = new_simulator(alpha4_statespace, nobs=default_nobs)
+        assert genRandseq_simulator.bgstateseq == new_simulator.bgstateseq
     
-    #test that each sample generated from the same Simulator instance has a different state sequence
+    #@pytest.mark.xfail(default_nobs == , zip(default_nobs_list, [argvalues)
+    def test_simulator_states_same2(self, alpha4_statespace, default_nobs, genRandseq_simulator, genRandseq_simulator_clone):
+        # test that genRandseq_simulator.bgstateseq is same as genRandseq_simulator_clone.bgstateseq
+        # only after the final iteration of sample generation from genRandseq_simulator
+        # using the standard parameters
+        sample = genRandseq_simulator(alpha4_statespace, nobs=default_nobs)
+        assert genRandseq_simulator.bgstateseq == genRandseq_simulator_clone.bgstateseq
+        
+        
+    # def test_simulator_states_dif(self, alpha4_statespace, default_nobs, genRandseq_simulator_clone):
+    #     # test that each sample generated from Simulator instances initiated with different seeds have different state sequences
+        
+    # @pytest.mark.xfail
+    # def test_simulator_stateseq(self, alpha4_statespace, default_nobs, genRandseq_samples, genRandseq_simulator_clone):
+    #     #test that each sample generated from the same Simulator instance has a different state sequence
+    #     assert 
+    
+    def test_simulator_samples(self, alpha4_statespace, default_nobs, genRandseq_samples, genRandseq_simulator):
+        #test that different simulators with same generating functions initiated with same seed have same samples
+        new_sample = genRandseq_simulator(alpha4_statespace, nobs=default_nobs)
+        assert genRandseq_samples == new_sample
+    
+    
         
         
