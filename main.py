@@ -218,7 +218,7 @@ def run(nsim, nobs, disttype, outroot, jobarray, jobid=None, seed=None):
                 samples = sim(states, n)
             elif disttype == 'markov':
                 #add alphabet size, a, to n as the first a states will be dropped from the sample
-                T = n + a
+                T = n + a + 500
                 samples = sim(MC_model, states, T)
             sampname = f'{distname}A{a}N{n}'
             simulatorstates[sampname] = sim.bgstateseq
