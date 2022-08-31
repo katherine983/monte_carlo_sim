@@ -142,3 +142,5 @@ def sim_est_dump(nsim, thetas, estimates, outpath, *args, **kwargs):
         data.update(addons)
         data.update({'Date_created' : datetime.datetime.now().isoformat(timespec='seconds')})
         json.dump(data, fouthand, **kwargs)
+        
+#need function to load simulated dataset 
