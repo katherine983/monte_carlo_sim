@@ -5,7 +5,6 @@ Created on Wed Aug  3 15:38:15 2022
 @author: Wuestney
 """
 import functools
-import tempfile
 import numpy as np
 from numpy.random import PCG64
 
@@ -105,7 +104,6 @@ class Simulator:
         self.sample = []
         #def wrapper(self, *args, **kwargs):
         #print('inside wrapped simulate function')
-        print(self.rng.bit_generator.state, file=tempfile.TemporaryFile(mode='w+'))
 
         # set the 'generator' kwarg to be the RNG defined during __init__()
         kwargs['generator'] = self.rng
