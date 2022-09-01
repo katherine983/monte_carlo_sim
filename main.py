@@ -4,6 +4,7 @@
 # # Demo of Monte Carlo Simulations for Apen, Sampen, and CGR-Renyi entropy measures
 
 import sys, pathlib
+import copy
 import argparse
 #print(sys.path)
 sys.path.append(pathlib.Path(__file__).parent)
@@ -221,7 +222,7 @@ def run(nsim, nobs, disttype, outroot, jobarray, jobid=None, seed=None):
                 T = n + a + 500
                 samples = sim(MC_model, states, T)
             sampname = f'{distname}A{a}N{n}'
-            simulatorstates[sampname] = sim.bgstateseq
+            simulatorstates[sampname] = copy.deepcopy(sim.bgstateseq)
             simulated[sampname] = samples
             values = []
             mvals = [1, 2, 3, 4]
