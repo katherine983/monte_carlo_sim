@@ -161,3 +161,4 @@ cython_debug/
 #.idea/
 *.json
 mprofile_20220805155020.dat
+scratch.ipynb
