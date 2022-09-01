@@ -4,7 +4,7 @@ Created on Wed Aug  3 16:17:56 2022
 
 @author: Wuestney
 """
-
+import copy
 import numpy as np
 from numpy.random import PCG64
 import pytest
@@ -16,8 +16,8 @@ from mc_measures.gen_mc_transition import gen_model, get_model, gen_sample
 # def seed():
 #     #seed for the RNG
 #     return 70296455059587591496887789747131377293
+nobs_list = [20, 50, 100]
 
-default_nobs_list = [20, 50, 100]
 def set_functype(disttype):
     #set disttype. Options: 'markov', 'uniform', 'regular'
     disttype = 'uniform'
@@ -110,7 +110,7 @@ class TestSimulator:
         randseq_simulator = Simulator(genRandseq, *simulator_params)
         return randseq_simulator
     
-    @pytest.fixture(scope='class', params=default_nobs_list)
+    @pytest.fixture(scope='class', params=nobs_list)
     def genRandseq_samples(self, request, alpha4_statespace, genRandseq_simulator_clone):
         # samples generated from a Simulator instance initiated with genRandseq and simulator_params
         sample = genRandseq_simulator_clone(alpha4_statespace, nobs=request.param)
@@ -135,7 +135,7 @@ class TestSimulator:
         new_simulator = Simulator(genRandseq, *simulator_params)
         assert genRandseq_simulator.bgstateseq['initial state'] == new_simulator.bgstateseq['initial state']
         
-    @pytest.mark.parametrize("samplesize", default_nobs_list, ids=idfn)
+    @pytest.mark.parametrize("samplesize", nobs_list, ids=idfn)
     def test_sample_lengths(self, samplesize, simulator_params, alpha4_statespace, genRandseq_simulator):
         # test that each sample generated from Simulator instances initiated with the same seeds have the same state sequence
         new_simulator = Simulator(genRandseq, *simulator_params)
@@ -177,7 +177,7 @@ class TestSimulator:
         for n in default_nobs_list:
             sampname = f"N{n}"
             samples = simulator(alpha4_statespace, nobs=n)
-            simulatorstates[sampname] = simulator.bgstateseq
+            simulatorstates[sampname] = copy.deepcopy(simulator.bgstateseq)
             simulated[sampname] = samples
         return simulatorstates, simulated
     
@@ -193,8 +193,8 @@ class TestSimulator:
         for n in default_nobs_list:
             sampname = f"N{n}"
             samples = sim1(alpha4_statespace, nobs=n)
-            simulatorstates[sampname] = sim1.bgstateseq
-            simulated[sampname] = samples
+            simulatorstates1[sampname] = copy.deepcopy(sim1.bgstateseq)
+            simulated1[sampname] = samples
         
         sim2 = Simulator(genRandseq, *simulator_params)
         #create dict to keep a log of bitgenerator state sequences for each sample
@@ -204,8 +204,8 @@ class TestSimulator:
         for n in default_nobs_list:
             sampname = f"N{n}"
             samples = sim2(alpha4_statespace, nobs=n)
-            simulatorstates[sampname] = sim2.bgstateseq
-            simulated[sampname] = samples
+            simulatorstates2[sampname] = copy.deepcopy(sim2.bgstateseq)
+            simulated2[sampname] = samples
         return {"sim1 bgstates": simulatorstates1, "sim1 samples" : simulated1, 
                 "sim2 bgstates": simulatorstates2, "sim2 samples" : simulated2}
     
@@ -221,8 +221,8 @@ class TestSimulator:
         for n in default_nobs_list:
             sampname = f"N{n}"
             samples = sim1(alpha4_statespace, nobs=n)
-            simulatorstates[sampname] = sim1.bgstateseq
-            simulated[sampname] = samples
+            simulatorstates1[sampname] = copy.deepcopy(sim1.bgstateseq)
+            simulated1[sampname] = samples
             
         #sim2 initiated with random seed
         sim2 = Simulator(genRandseq, *simulator_params)
@@ -233,8 +233,8 @@ class TestSimulator:
         for n in default_nobs_list:
             sampname = f"N{n}"
             samples = sim2(alpha4_statespace, nobs=n)
-            simulatorstates[sampname] = sim2.bgstateseq
-            simulated[sampname] = samples
+            simulatorstates2[sampname] = copy.deepcopy(sim2.bgstateseq)
+            simulated2[sampname] = samples
         return {"sim1 bgstates": simulatorstates1, "sim1 samples" : simulated1, 
                 "sim2 bgstates": simulatorstates2, "sim2 samples" : simulated2}
     
@@ -246,8 +246,8 @@ class TestSimulator:
         samples = sim1(alpha4_statespace, default_nobs)
         simulatedstates = {sampname : sim1.bgstateseq}
         assert len(samples) == nsim
-        states = [simulatedstates[sampname][statedict]['state'] for statedict in simulatedstates[sampname].keys()]
-        if simulatedstates[sampname]['initial state']['state'] == simulatedstates[sampname][0]['state']:
+        states = [simulatedstates[sampname][statedict]['state']['state'] for statedict in simulatedstates[sampname].keys()]
+        if simulatedstates[sampname]['initial state']['state']['state'] == simulatedstates[sampname][0]['state']['state']:
             #assert that all states besides initial state and first sample state in the bgstateseq are unique
             assert len(set(states)) == (nsim + 1)
         else:
@@ -258,39 +258,96 @@ class TestSimulator:
         # test that each sample generated for every nobs from a single Simulator instance have different bgstates
         # genRandseq_1simulated uses same default_nobs_list to define the nobs
         simulatedstates, simulated = genRandseq_1simulated
+        prevbatch = list()
+        statesincommon = []
+        # for the rest of the nobs in the nobs list, get an bool array indicating
+        # which bg states are the same as the first sample batch
+        for nobs in default_nobs_list:
+            sampname = f"N{nobs}"
+            assert np.array(simulated[sampname]).shape[1] == nobs
+            states = [simulatedstates[sampname][statedict]['state']['state'] for statedict in simulatedstates[sampname].keys()]
+            if len(prevbatch) == 0:
+                prevbatch = np.array(states)
+            else:
+                statesincommon.append(np.equal(np.array(states), prevbatch))
+                prevbatch = np.array(states)
+        #get number of True elements in each row of statesincommon
+        statesincommonsum = np.array(statesincommon).sum(1)
+        # if sample batches' bgstateseqs are non-overlapping then the sum of elements that equal eachother should be 1 (for the initial state)
+        assert all(np.equal(1, statesincommonsum))
+        
+    def test_simulator_states_sequential_across_samples(self, genRandseq_1simulated, default_nobs_list):
+        # test that each sample generated for every nobs from a single Simulator instance have different bgstates
+        # genRandseq_1simulated uses same default_nobs_list to define the nobs
+        simulatedstates, simulated = genRandseq_1simulated
+        prevbatch = list()
+        statesincommon = []
+        # for the rest of the nobs in the nobs list, get an bool array indicating
+        # which bg states are the same as the first sample batch
+        for nobs in default_nobs_list:
+            sampname = f"N{nobs}"
+            assert np.array(simulated[sampname]).shape[1] == nobs
+            states = [simulatedstates[sampname][statedict]['state']['state'] for statedict in simulatedstates[sampname].keys()]
+            if len(prevbatch) == 0:
+                prevbatch = states
+                # check if initial state and state at sample index 0 are equal for first sample
+                statesincommon.append(states[0]==states[1])
+            else:
+                # check if state at sample index 0 (states index 1) equals the last state in the previous sample batch
+                statesincommon.append(states[1]==prevbatch[-1])
+                prevbatch = states
+
+        # if sample batches' bgstateseqs are sequential then all elements in statesincomon should be True
+        assert all(statesincommon)
+        
+    def test_simulator_samps_dif_across_samples(self, genRandseq_1simulated, default_nobs_list):
+        # test that each sample generated for every nobs from a single Simulator instance have different bgstates
+        # genRandseq_1simulated uses same default_nobs_list to define the nobs
+        simulatedstates, simulated = genRandseq_1simulated
         smallestsampsize = min(default_nobs_list)
         firstsampname = f"N{default_nobs_list[0]}"
         #get array of states of the batch of samples for the first nobs generated from the simulator
-        firstsampstates = np.array([simulatedstates[firstsampname][statedict]['state'] for statedict in simulatedstates[firstsampname].keys()])
-        prevbatch = list()
-        statesincommon = []
+        firstsamp = np.array(simulated[firstsampname])
+        sampsincommon = []
         # for the rest of the nobs in the nobs list, get an bool array indicating
         # which bg states are the same as the first sample batch
         for nobs in default_nobs_list[1:]:
             sampname = f"N{nobs}"
             assert np.array(simulated[sampname]).shape[1] == nobs
-            states = [simulatedstates[sampname][statedict]['state'] for statedict in simulatedstates[sampname].keys()]
-            if len(prevbatch) == 0:
-                prevbatch = np.array(states)
-            statesincommon.append(np.equal(np.array(states), firstsampstates))
-        #get number of True elements in each row of statesincommon
-        statesincommonsum = np.array(statesincommon).sum(1)
-        # if sample batches' bgstateseqs are non-overlapping then the sum of elements that equal eachother should be 1 (for the initial state)
-        assert statesincommon
+            states = np.array(simulated[sampname])
+            sampsincommon.append(np.array_equal(states[:, 0:smallestsampsize], firstsamp))
+        assert sum(sampsincommon) == 0
 
-    def test_simulator_states_dif_across_simulators(self, simulator_params, alpha4_statespace, default_nobs_list, genRandseq_simulator):
+    @pytest.mark.xfail
+    def test_simulator_states_dif_across_simulators(self, genRandseq_2simulated_dif, default_nobs_list):
         # test that each sample generated from Simulator instances initiated with different seeds have different state sequences
-        nsim, seed = simulator_params
-        new_simulator = Simulator(genRandseq, nsim)
-        newsimulated = {}
-        for n in nobs:
-            name = f"N{n}"
-            samples
-    # @pytest.mark.xfail
-    # def test_simulator_stateseq(self, alpha4_statespace, default_nobs, genRandseq_samples, genRandseq_simulator_clone):
-    #     #test that each sample generated from the same Simulator instance has a different state sequence
-    #     assert 
-    
+        simulatedstates1 = genRandseq_2simulated_dif["sim1 bgstates"]
+        simulatedstates2 = genRandseq_2simulated_dif["sim2 bgstates"]
+        simulated1 = genRandseq_2simulated_dif["sim1 samples"]
+        simulated2 = genRandseq_2simulated_dif["sim2 samples"]
+        states1 = []
+        states2 = []
+        for nobs in default_nobs_list[1:]:
+            sampname = f"N{nobs}"
+            states1.append([simulatedstates1[sampname][statedict]['state']['state'] for statedict in simulatedstates1[sampname].keys()])
+            states2.append([simulatedstates2[sampname][statedict]['state']['state'] for statedict in simulatedstates2[sampname].keys()])
+        assert np.array_equal(np.array(states1), np.array(states2))
+
+    def test_simulator_states_same_across_simulatorclones(self, genRandseq_2simulated_same, default_nobs_list):
+        # test that each sample generated from Simulator instances initiated with different seeds have different state sequences
+        simulatedstates1 = genRandseq_2simulated_same["sim1 bgstates"]
+        simulatedstates2 = genRandseq_2simulated_same["sim2 bgstates"]
+        simulated1 = genRandseq_2simulated_same["sim1 samples"]
+        simulated2 = genRandseq_2simulated_same["sim2 samples"]
+        states1 = []
+        states2 = []
+        for nobs in default_nobs_list[1:]:
+            sampname = f"N{nobs}"
+            states1.append([simulatedstates1[sampname][statedict]['state']['state'] for statedict in simulatedstates1[sampname].keys()])
+            states2.append([simulatedstates2[sampname][statedict]['state']['state'] for statedict in simulatedstates2[sampname].keys()])
+        assert np.array_equal(np.array(states1), np.array(states2))
+
+
     def test_simulator_samples(self, simulator_params, default_nobs, alpha4_statespace):
         #test that different simulators with same generating functions initiated with same seed have same samples
         sim1 = Simulator(genRandseq, *simulator_params)

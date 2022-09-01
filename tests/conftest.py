@@ -7,13 +7,18 @@ Created on Wed Aug  3 16:04:29 2022
 
 import pytest
 
-default_nobs_list = [20, 50, 100]
+nobs_list = [20, 50, 100]
+
+@pytest.fixture(scope='session')
+def default_nobs_list():
+    return [20, 50, 100]
+
 @pytest.fixture(scope='session')
 def alpha4_statespace():
     statespace = ['a', 'b', 'c', 'd']
     return statespace
 
-@pytest.fixture(scope='session', params=default_nobs_list)
+@pytest.fixture(scope='session', params=nobs_list)
 def default_nobs(request):
     return request.param
 
