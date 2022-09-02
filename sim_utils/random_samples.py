@@ -95,6 +95,7 @@ class Simulator:
         # empty dict to contain the bitgenerator states at each iteration
         # selg.bgstateseq will become a dict of dicts
         self.bgstateseq = {'initial state' : self.rng.bit_generator.state}
+        #self.mode = "decorating"
 
     def __call__(self, *args, **kwargs):
         # define process to run when function decorated by Simulator is called

@@ -68,7 +68,7 @@ def get_data_file_path(root_dir=None, out_dir='sim_data', out_name=None):
             return out_path
 
 def sim_data_dump(simulated, states, outpath, *args, **kwargs):
-    """Writes MC matrix data to a json file. Opens the file, writes, and closes it.
+    """Writes random samples to a json file. Opens the file, writes, and closes it.
 
     simulated : DICT
         DICT CONTAINING THE SIMULATION NAME AS A KEY AND A LIST OF THE SIMULATED SAMPLES AS THE VALUE.
@@ -142,3 +142,5 @@ def sim_est_dump(nsim, thetas, estimates, outpath, *args, **kwargs):
         data.update(addons)
         data.update({'Date_created' : datetime.datetime.now().isoformat(timespec='seconds')})
         json.dump(data, fouthand, **kwargs)
+        
+#need function to load simulated dataset 
