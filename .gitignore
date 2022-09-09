@@ -163,3 +163,5 @@ cython_debug/
 mprofile_20220805155020.dat
 scratch.ipynb
 scratch.ipynb
+*.err
+*.out
