@@ -61,7 +61,13 @@ def genRandseq(statespace, nobs=100, generator='default', seed=None):
     # states is a numpy array of the states in the statespace
     if type(statespace) is int:
         a = statespace
-        states = np.array([i for i in range(a)])
+        if a <= 256:
+            states = np.array([i for i in range(a)], dtype=np.uint8)
+        elif a <= 65535:
+            states = np.array([i for i in range(a)], dtype=np.uint16)
+        else:
+            states = np.array([i for i in range(a)])
+
     elif type(statespace) is str:
         a = len(statespace)
         states = np.array(list(statespace))
@@ -72,7 +78,7 @@ def genRandseq(statespace, nobs=100, generator='default', seed=None):
     randints = rng.integers(a, size=nobs)
     # slice states with randints to get a sequence of random states
     seq = states[randints]
-    return seq.tolist()
+    return seq
 
 
 #define a decorator class to decorate random sample generating functions
