@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --partition=cook	# Partition/Queue to use
-#SBATCH --job-name=testSim	# Job name
-#SBATCH --output='outputs/testSim_%j.out'	# Output file (stdout)
-#SBATCH --error='errors/testSim_%j.err'	# Error file (stderr)
-#SBATCH --time=1-00:00:00	# Wall clock time limit Days-HH:MM:SS
+#SBATCH --job-name=iid500Sim	# Job name
+#SBATCH --output='outputs/iid500Sim_%j.out'	# Output file (stdout)
+#SBATCH --error='errors/iid500Sim_%j.err'	# Error file (stderr)
+
 #SBATCH --mail-type=ALL	# Email notification: BEGIN,END,FAIL,ALL
 #SBATCH --mail-user=katherine.graham@wsu.edu	# Email address for notifications
 #SBATCH --array=0-7:1		# Number of jobs, in steps of 1
