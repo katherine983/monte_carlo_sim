@@ -8,7 +8,7 @@ import datetime
 import json
 from pathlib import Path
 import sys
-
+import numpy as np
 
 
 def create_output_file_path(root_dir=None, out_dir='sim_data', out_name=None, overide=False):
@@ -66,14 +66,14 @@ def get_data_file_path(root_dir=None, out_dir='sim_data', out_name=None):
             raise Exception("File does not exist. Please enter existing filepath.")
         else:
             return out_path
-
+        
 def sim_data_dump(simulated, states, outpath, *args, **kwargs):
-    """Writes random samples to a json file. Opens the file, writes, and closes it.
+    """Writes data to a compressed numpy file and metadata related 
+    to random samples to a json file. Opens the file, writes, and closes it.
 
     simulated : DICT
         DICT CONTAINING THE SIMULATION NAME AS A KEY AND A LIST OF THE SIMULATED SAMPLES AS THE VALUE.
-        SAMPLE SEQUENCES SHOULD ALSO BE IN LIST OR STRING FORM
-        OR ELSE THEY WILL CAUSE AN ERROR IN THE JSON SERIALIZER.
+        THE SIMULATED SAMPLES SHOULD BE NUMPY ARRAYS.
     states : DICT
         DICTIONARY CONTAINING THE BITGENERATOR STATES CORRESPONDING TO EACH SAMPLE IN SIMULATED.
         EACH KEY IN states IS AN INTEGER CORRESPONDING TO THE INDEX OF THE SAMPLE
@@ -89,6 +89,14 @@ def sim_data_dump(simulated, states, outpath, *args, **kwargs):
         ARGS FOR SIM DATA AS THESE WILL BE PLACED IN **KWARGS AND FED TO THE JSON
         FUNCTION, NOT SAVED AS DATA IN THE JSON FILE.
     """
+    #dict of sampnames and filepaths where data for that sample are stored
+    datapaths = {}
+    outdir = Path(outpath).parent
+    for sampname, samples in simulated.items():
+        datapath = outdir / f"{sampname}_data.npz"
+        datapaths[sampname] = str(datapath)
+        np.savez_compressed(datapath, *samples)
+        
     addons = {'Alphabet' : None, 'Name of Generating Distribution' : None, 'Markov Order' : None}
     if args[0]:
         addons['Alphabet'] = args[0]
@@ -97,11 +105,12 @@ def sim_data_dump(simulated, states, outpath, *args, **kwargs):
     if args[2]:
         addons['Markov Order'] = args[2]
     with open(outpath, 'w+') as fouthand:
-        data = {'Simulated Samples' : simulated,
+        data = {'Simulated Samples Location' : datapaths,
                 'BitGenerator states' : states}
         data.update(addons)
         data.update({'Date_created' : datetime.datetime.now().isoformat(timespec='seconds')})
         json.dump(data, fouthand, **kwargs)
+
 
 def sim_est_dump(nsim, thetas, estimates, outpath, *args, **kwargs):
     """
