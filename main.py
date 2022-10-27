@@ -191,7 +191,8 @@ def run(nsim, nobs, disttype, outroot, jobarray, jobid=None, seed=None):
             a = int(params['a'])
             distname = 'iiduni'
             #set of values making up the discrete-valued state space of the random variable X
-            states = [chr(ord('a')+i) for i in range(a)]
+            #states = [chr(ord('a')+i) for i in range(a)]
+            states = np.array(range(a))
             mc_order = 0
         if disttype == 'markov':
             # get saved markov matrix from file
@@ -275,7 +276,7 @@ if __name__ == "__main__":
                         help='list of sample sizes to generate')
     parser.add_argument('-d', '--disttype', type=str, choices=['uniform', 'markov'],
                         required=True, help='distribution type to sample from')
-    parser.add_argument('--jobarray',  type=int, help='slurm array task id')
+    parser.add_argument('-j', '--jobarray',  type=int, required=True, help='slurm array task id')
     parser.add_argument('-o', '--outroot',
                         required=True, help='Path for output files to go')
     parser.add_argument('--seed', type=str, help='seed for RNG')
