@@ -268,7 +268,9 @@ def run(nsim, nobs, disttype, outroot, jobarray, jobid=None, seed=None):
 
 if __name__ == "__main__":
     import os
-    print("Number of CPUs available:", os.environ["OMP_NUM_THREADS"])
+    threads = os.getenv("OMP_NUM_THREADS")
+    if threads:
+        print("Number of CPUs available:", os.environ["OMP_NUM_THREADS"])
     parser = argparse.ArgumentParser(description='Run entropy simulations.')
     parser.add_argument('nsim', type=int,
                         help='number of samples to generate')
