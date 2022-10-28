@@ -174,3 +174,9 @@ doc/compressedsamples.npz
 doc/discreteMSEperformancen500.1000.5000.png
 doc/Untitled.ipynb
 doc/manuscript2_figures.py
+*.dat
+simulation_output/simulation_output/simulated_2022-10-27/iiduniA15N100_data_2022-10-27T182135.npz
+simulation_output/simulation_output/simulated_2022-10-27/iiduniA15N100_data_2022-10-27T182455.npz
+simulation_output/simulation_output/simulated_2022-10-27/iiduniA15N100_data_2022-10-27T184433.npz
+simulation_output/simulation_output/simulated_2022-10-27/iiduniA15N200_data_2022-10-27T182135.npz
+simulation_output/simulation_output/simulated_2022-10-27/iiduniA15N200_data_2022-10-27T182455.npz
