@@ -37,6 +37,9 @@ SIG2V = ('1.000000e-10', '1.778279e-10', '3.162278e-10', '5.623413e-10',
                 '1', '1.778279e+00', '3.162278e+00', '5.623413e+00', '10', '1.778279e+01',
                 '3.162278e+01', '5.623413e+01', '100')
 
+# this is the default set of m values for ApEn and SampEn
+MVALS = [1, 2, 3, 4]
+
 # define functions to compute expected entropy values for different generating distributions
 def theta_iiduniform(a, sig2v=SIG2V):
     # a is the cardinality of the alphabet of the generating function
@@ -65,7 +68,8 @@ def theta_markov(MC_model):
 
 # combine making usm instance and computing renyi entropy into one function so
 # that it can be passed to a Simulator class
-def cgr_renyi(data, sig2v=SIG2V, A=None, refseq=None, Plot=False):
+#@profile
+def compute_cgr_renyi(data, sig2v=SIG2V, A=None, refseq=None, Plot=False):
     """
     Combines making the usm coordinates from a data sequence and calculating the renyi entropy values on the CGR object.
 
@@ -93,6 +97,14 @@ def cgr_renyi(data, sig2v=SIG2V, A=None, refseq=None, Plot=False):
     cgr_coords = np.asarray(cgr.fw)
     renyi = pyusm.usm_entropy.renyi2usm(cgr_coords, sig2v, refseq=refseq, Plot=Plot, deep_copy=False)
     return renyi
+
+#@profile
+def compute_apen_and_sampen(data, mvals=MVALS, refseq=None):
+    mests = []
+    for m in mvals:
+        est = {'m' : m, 'apen' : discreteMSE.apen(data, m)[0], 'sampen' : discreteMSE.sampen(data, m, refseq=refseq)[0]}
+        mests.append(est)
+    return mests
 
 #@profile
 def run(nsim, nobs, disttype, outroot, jobarray, jobid=None, seed=None):
@@ -148,7 +160,12 @@ def run(nsim, nobs, disttype, outroot, jobarray, jobid=None, seed=None):
     #     print("Failed assertion: {}".format(err))
     #     raise
     multifile = False
-
+    
+    #if jobid is None output file names will be appended with current datetime
+    if jobid is None:
+        # datetime to append to output file names
+        jobid = datetime.datetime.now().strftime('%Y-%m-%dT%H%M%S')
+        
     # set up simulation parameters based on disttype
     if disttype == 'uniform':
         func = genRandseq
@@ -210,12 +227,13 @@ def run(nsim, nobs, disttype, outroot, jobarray, jobid=None, seed=None):
             thetas = theta_markov(MC_model)
         #create dict to keep a log of bitgenerator state sequences for each sample
         simulatorstates = {}
-        #empty dict to hold simulated datasets
+        #empty dict to hold simulated dataset filepaths
         simulated = {}
         #empty list to hold entropy estimates (theta hats)
         estimates = []
         for n in nobs:
             print(f"Beginning simulations for sample sizes {n}")
+            #get a list containing nsim sample sequences
             if disttype == 'uniform':
                 samples = sim(states, n)
             elif disttype == 'markov':
@@ -223,31 +241,39 @@ def run(nsim, nobs, disttype, outroot, jobarray, jobid=None, seed=None):
                 T = n + a + 500
                 samples = sim(MC_model, states, T)
             sampname = f'{distname}A{a}N{n}'
+            samppath = sim_files.create_output_file_path(root_dir=outroot,
+                                                         out_dir=f'simulation_output/simulated_{simdate}',
+                                                         out_name=f"{sampname}_data_{jobid}.npz",
+                                                         overide=False)
+            #save string path to saved samples
+            simulated[sampname] = str(samppath)
+            #save samples as compressed numpy binary files 
+            np.savez_compressed(samppath, *samples)
+            
+            #save rng states for sampname
             simulatorstates[sampname] = copy.deepcopy(sim.bgstateseq)
-            simulated[sampname] = samples
+            
             values = []
-            mvals = [1, 2, 3, 4]
-            sig2v = SIG2V
+            #mvals = [1, 2, 3, 4]
+            #sig2v = SIG2V
             for i in range(len(samples)):
                 vals = {'sample' : i}
                 #print(samples[i])
-                renyis = cgr_renyi(samples[i], sig2v, A=states, refseq=f'{sampname}i{i}', Plot=False)
-                mests = []
-                for m in mvals:
-                    est = {'m' : m, 'apen' : discreteMSE.apen(samples[i], m)[0], 'sampen' : discreteMSE.sampen(samples[i], m, refseq=f'{sampname}i{i}')[0]}
-                    mests.append(est)
+                renyis = compute_cgr_renyi(samples[i], SIG2V, A=states, refseq=f'{sampname}i{i}', Plot=False)
+                #moved to the function compute_apen_and_sampen()
+                # mests = []
+                # for m in mvals:
+                #     est = {'m' : m, 'apen' : discreteMSE.apen(samples[i], m)[0], 'sampen' : discreteMSE.sampen(samples[i], m, refseq=f'{sampname}i{i}')[0]}
+                #     mests.append(est)
+                mests = compute_apen_and_sampen(samples[i], mvals=MVALS, refseq=f'{sampname}i{i}')
                 vals.update({'renyi_hats' : [renyis,], 'theta_hats' : mests})
                 values.append(vals)
             estimates.append({'sampname': sampname, 'nobs' : n, 'values' : values})
     
         #assert estimates is list of dicts
     
-        #save simulated datasets as a json file
+        #save simulation metadata to a json file
         
-        #if jobid is None output file names will be appended with current datetime
-        if jobid is None:
-            # datetime to append to output file names
-            jobid = datetime.datetime.now().strftime('%Y-%m-%dT%H%M%S')
         #make list to contain the extra args to feed to sim_files.sim_data_dump()
         #in the order [alphabet, data generating distribution, Markov order]
         addinfo = [a, distname, mc_order]

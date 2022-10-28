@@ -88,15 +88,7 @@ def sim_data_dump(simulated, states, outpath, *args, **kwargs):
         ANY ADDITIONAL ARGUMENTS TO BE FED TO JSON.DUMP(). DO NOT USE ANY NAMED
         ARGS FOR SIM DATA AS THESE WILL BE PLACED IN **KWARGS AND FED TO THE JSON
         FUNCTION, NOT SAVED AS DATA IN THE JSON FILE.
-    """
-    #dict of sampnames and filepaths where data for that sample are stored
-    datapaths = {}
-    outdir = Path(outpath).parent
-    for sampname, samples in simulated.items():
-        datapath = outdir / f"{sampname}_data.npz"
-        datapaths[sampname] = str(datapath)
-        np.savez_compressed(datapath, *samples)
-        
+    """ 
     addons = {'Alphabet' : None, 'Name of Generating Distribution' : None, 'Markov Order' : None}
     if args[0]:
         addons['Alphabet'] = args[0]
@@ -105,7 +97,7 @@ def sim_data_dump(simulated, states, outpath, *args, **kwargs):
     if args[2]:
         addons['Markov Order'] = args[2]
     with open(outpath, 'w+') as fouthand:
-        data = {'Simulated Samples Location' : datapaths,
+        data = {'Simulated Samples Location' : simulated,
                 'BitGenerator states' : states}
         data.update(addons)
         data.update({'Date_created' : datetime.datetime.now().isoformat(timespec='seconds')})
