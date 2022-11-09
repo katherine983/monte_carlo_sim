@@ -1,8 +1,8 @@
 #!/bin/bash
-#SBATCH --partition=kamiak	# Partition/Queue to use
-#SBATCH --job-name=testSim	# Job name
-#SBATCH --output='outputs/testSim_%j.out'	# Output file (stdout)
-#SBATCH --error='errors/testSim_%j.err'	# Error file (stderr)
+#SBATCH --partition=cook	# Partition/Queue to use
+#SBATCH --job-name=iid10000nSim	# Job name
+#SBATCH --output='outputs/iid10000nSim_%j.out'	# Output file (stdout)
+#SBATCH --error='errors/iid10000nSim_%j.err'	# Error file (stderr)
 
 #SBATCH --mail-type=ALL	# Email notification: BEGIN,END,FAIL,ALL
 #SBATCH --mail-user=katherine.graham@wsu.edu	# Email address for notifications
@@ -10,11 +10,11 @@
 
 #SBATCH --nodes=1		# Number of nodes (min-max)
 #SBATCH --ntasks-per-node=1	# Number of tasks per node (max)
-#SBATCH --cpus-per-task=8	# Number of cores per task (threads)
+#SBATCH --cpus-per-task=10	# Number of cores per task (threads)
 
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 echo "Starting job array $SLURM_ARRAY_TASK_ID for $SLURM_ARRAY_JOB_ID running on nodes $SLURM_JOB_NODELIST"
-export myscratch="/scratch/user/katherine.graham/20221030_142757"
+export myscratch="/scratch/user/katherine.graham/20221108_163342"
 module load miniconda3		# Load software module from Kamiak repository
 source activate mcenv
 srun -l python main.py 10000 --nobs 500 1000 2500 5000 -d uniform -o $myscratch --jobarray $SLURM_ARRAY_TASK_ID
