@@ -14,7 +14,8 @@
 
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 echo "Starting job array $SLURM_ARRAY_TASK_ID for $SLURM_ARRAY_JOB_ID running on nodes $SLURM_JOB_NODELIST"
-export myscratch="/scratch/user/katherine.graham/20221023_164424"
+export myscratch="$(mkworkspace)"
+echo "Storing simulation output in $myscratch"
 module load miniconda3		# Load software module from Kamiak repository
 source activate mcenv
 srun -l python main.py 10000 --nobs 500 1000 2500 5000 -d uniform -o $myscratch --jobarray $SLURM_ARRAY_TASK_ID
