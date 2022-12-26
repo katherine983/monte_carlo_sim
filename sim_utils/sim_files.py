@@ -63,6 +63,7 @@ def get_data_file_path(root_dir=None, out_dir='sim_data', out_name=None):
     else:
         out_path = dirpath / out_name
         if not out_path.exists():
+            #print('Outpath: ', out_path)
             raise Exception("File does not exist. Please enter existing filepath.")
         else:
             return out_path

@@ -107,7 +107,7 @@ def compute_apen_and_sampen(data, mvals=MVALS, refseq=None):
     return mests
 
 #@profile
-def run(nsim, nobs, disttype, outroot, jobarray, jobid=None, seed=None):
+def run(nsim, nobs, disttype, outroot, jobarray, jobid=None, seed=None, markovname=None):
     """
     generic routine for generating series of random samples, computing entropy
     statistics from each sample and saving all data to json files. For each number
@@ -133,6 +133,8 @@ def run(nsim, nobs, disttype, outroot, jobarray, jobid=None, seed=None):
         SEED IS THE SEED FOR THE RNG, CAN BE AN INTEGER (128-BIT RECOMMENDED)
         OR NONE. IF NONE THEN RNG SEED WILL BE GENERATED FROM THE SYSTEM ENTROPY.
         The default is None.
+    markovname : STRING
+        NAME OF THE MARKOV MODEL BESIDES THE ARRAY NUMBER. I.E. ORDER1ALPH4, ORDER2ALPH18, ETC.
     Returns
     -------
     None.
@@ -188,7 +190,7 @@ def run(nsim, nobs, disttype, outroot, jobarray, jobid=None, seed=None):
         else:
             # get data file path
             paramfiles = sim_files.get_data_file_path(out_dir='input_data/mc_matrices', 
-                                                      out_name=f'markov_{jobarray}.json')
+                                                      out_name=f'{markovname}_{jobarray}.json')
             paramfiles = [paramfiles]
     else:
         raise Exception("""Unknown disttype. Please check spelling or documentation
@@ -237,9 +239,9 @@ def run(nsim, nobs, disttype, outroot, jobarray, jobid=None, seed=None):
             if disttype == 'uniform':
                 samples = sim(states, n)
             elif disttype == 'markov':
-                #add alphabet size, a, to n as the first a states will be dropped from the sample
-                T = n + a + 500
-                samples = sim(MC_model, states, T)
+                #add 500 to n as the first 500 states will be dropped from the sample
+                T = n + 500
+                samples = sim(MC_model, states[0:mc_order], T, dropfirst=500)
             sampname = f'{distname}A{a}N{n}'
             samppath = sim_files.create_output_file_path(root_dir=outroot,
                                                          out_dir=f'simulation_output/simulated_{simdate}',
@@ -308,8 +310,9 @@ if __name__ == "__main__":
     parser.add_argument('-o', '--outroot',
                         required=True, help='Path for output files to go')
     parser.add_argument('--seed', type=str, help='seed for RNG')
+    parser.add_argument('--markovname', type=str, help='name of Markov model')
     args = parser.parse_args()
     # print(args.nsim, type(args.nsim))
     # print(args.nobs, type(args.nobs))
     # print(args.disttype, type(args.disttype))
-    run(args.nsim, args.nobs, args.disttype, args.outroot, args.jobarray, args.seed)
+    run(args.nsim, args.nobs, args.disttype, args.outroot, args.jobarray, seed=args.seed, markovname=args.markovname)
